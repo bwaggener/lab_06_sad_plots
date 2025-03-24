@@ -1,0 +1,130 @@
+---
+title: "lab_06"
+output: html_document
+---
+```{r setup, include=FALSE}
+library(tidyverse)
+
+```
+
+Get data
+```{r load-data}
+staff <- read_csv("data/instructional-staff.csv")
+```
+
+wide to long 
+```{r wide-to-long}
+staff_long <- staff %>%
+  pivot_longer(cols = -faculty_type, names_to = "year") %>%
+  mutate(value = as.numeric(value))
+```
+
+plot as a line graph
+incorrect line graph
+
+```{r line-graph}
+staff_long %>%
+  ggplot(aes(x = year, y = value, color = faculty_type)) +
+  geom_line()
+```
+
+
+
+```{r corr_line-graph}
+staff_long %>%
+  ggplot(aes(
+    x = year,
+    y = value,
+    group = faculty_type,
+    color = faculty_type
+  )) +
+  geom_line()
+```
+
+
+"Suppose the objective of this plot was to show that the proportion of part-time faculty have gone up over time compared to other instructional staff types."
+
+The proportion for each faculty type is value divided by the sum of all values for that year. 
+
+```{r plot-proportion}
+staff_long_propor <- staff_long %>%
+  group_by(year) %>%
+  mutate(
+    proportion = value / sum(value)) %>%
+  ungroup()
+```
+
+```{r plot-proportion}
+library(viridis)
+
+staff_long_propor %>%
+  ggplot(aes(
+    x = year,
+    y = proportion,
+    group = faculty_type,
+    color = faculty_type,
+    fill = faculty_type
+  )) +
+  geom_area(alpha = 0.8) + 
+  scale_fill_viridis_d(option = "viridis") +  
+  scale_color_viridis_d(option = "viridis") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Proportion of Faculty Types Over Time",
+    x = "Year",
+    y = "Proportion",
+    fill = "Faculty Type",
+    color = "Faculty Type"
+  ) +
+  theme_minimal()
+```
+
+##Fisheries
+"The Fisheries and Aquaculture Department of the Food and Agriculture Organization of the United Nations (FAO) collects data on the fisheries production of different countries. You can find a list of fishery production for various countries in 2016 on this Wikipedia page. The data includes the tonnage of fish captured and farmed for each country. Note that countries whose total harvest was less than 100,000 tons are excluded from the visualization."
+
+"Can you help them improve it? First, brainstorm how you would improve it. Then create the improved visualization and document your changes/decisions with bullet points. It’s ok if some of your improvements are aspirational, i.e. you don’t know how to implement it, but you think it’s a good idea. Implement what you can and leave notes identifying the aspirational improvements that could not be made. (You don’t need to recreate their plots in order to improve them)"
+
+I think I will just plot the data as bars with colors showing the proportion. Additionally I want to group them by their total production.
+```{r load-fish}
+fish <- read_csv("data/fisheries.csv")
+```
+
+```{r mutate-fish}
+top_countries <- c("China", "Russia", "Norway", "Malaysia", "Spain", "Nigeria", "France", "Mauritania", "Nambia", "Ghana")
+
+simple_fish <- fish %>%
+  mutate(
+    country = ifelse(country %in% top_countries, country, "Other")
+  ) %>%
+  group_by(country) %>%
+  summarize(across(where(is.numeric), sum, na.rm = TRUE)) %>%
+  ungroup()
+
+```
+
+```{r plot-fish}
+library(ggplot2)
+library(dplyr)
+library(forcats)
+
+fish_longer <- fish %>%
+  pivot_longer(cols = c(capture, aquaculture), names_to = "type", values_to = "value") %>%
+  mutate(proportion = value / total)
+
+# Reorder countries by total production
+fish_longer <- fish_longer %>%
+  mutate(country = fct_reorder(country, total))
+
+# Plot
+ggplot(fish_longer, aes(x = country, y = proportion, fill = type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  scale_fill_viridis_d(option = "plasma") +  # Colorblind-friendly palette
+  labs(
+    title = "Fisheries Production Proportions by Country",
+    x = "Country",
+    y = "Proportion of Total Production",
+    fill = "Production Type"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
