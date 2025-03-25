@@ -54,7 +54,7 @@ staff_long_propor <- staff_long %>%
   ungroup()
 ```
 
-```{r plot-proportion}
+```{r plot-proportion1}
 library(viridis)
 
 staff_long_propor %>%
@@ -107,24 +107,123 @@ library(ggplot2)
 library(dplyr)
 library(forcats)
 
-fish_longer <- fish %>%
-  pivot_longer(cols = c(capture, aquaculture), names_to = "type", values_to = "value") %>%
-  mutate(proportion = value / total)
+fish_longer_filtered <- fish_longer %>%
+  filter(total >= 500000)  # Exclude countries with total harvest less than 100,000 tons
 
-# Reorder countries by total production
-fish_longer <- fish_longer %>%
-  mutate(country = fct_reorder(country, total))
+# Create an improved plot with a log scale, color differentiation, and better labeling
+fish_grouped <- fish_longer_filtered %>%
+  mutate(
+    total_group = cut(total,
+                      breaks = quantile(total, probs = 0:5 / 5, na.rm = TRUE),
+                      include.lowest = TRUE,
+                      labels = c("Very Low", "Low", "Medium", "High", "Very High"))
+  )
 
-# Plot
-ggplot(fish_longer, aes(x = country, y = proportion, fill = type)) +
+# Create a stacked bar plot
+ggplot(fish_grouped, aes(
+  x = reorder(country, total),  # Order countries by total production
+  y = total,
+  fill = factor(type),  # Differentiate by capture vs aquaculture
+)) +
   geom_bar(stat = "identity", position = "stack") +
-  scale_fill_viridis_d(option = "plasma") +  # Colorblind-friendly palette
+  scale_fill_viridis_d(option = "viridis") +  # Use a distinct color palette
   labs(
-    title = "Fisheries Production Proportions by Country",
+    title = "Fishery Production by Country and Grouped by Total Production",
     x = "Country",
-    y = "Proportion of Total Production",
-    fill = "Production Type"
+    y = "Total Production (Tons)",
+    fill = "Fishery Type",
+    caption = "Groups: Very Low, Low, Medium, High, Very High"
   ) +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    plot.margin = margin(1, 1, 1, 3)
+  ) +
+  geom_text(aes(label = total_group), position = position_stack(vjust = 0.5), size = 3, color = "white")  # Show total group on each bar
+```
+
+
+```{r loadpackages}
+library(tidyverse)
+library(mosaicData)
+
+data(Whickham)
+```
+
+### Exercise 1
+This data seems to be observational beause I doubt that researchers assigned people to smoke or not smoke and then measured if they died or not. This was likely an observational study where they collected data from the population.
+
+### Exercise 2 and 3
+There are 1,314 observations in this dataset. Each observation includes an outcome variable (dead or alive) after 20 years, smoker (no or yes), and age at the start of the study. These were all women.
+```{r count}
+nrow(Whickham)
+```
+Visualizing outcome variable
+```{r outcomeplot}
+Whickham %>%
+  ggplot(aes(x = outcome)) +
+  geom_bar()
+```
+
+Visualizing smoker variable
+```{r smokerplot}
+Whickham %>%
+  ggplot(aes(x = smoker)) +
+  geom_bar()
+```
+
+Visualizing age variable
+```{r ageplot}
+Whickham %>%
+  ggplot(aes(x = age)) +
+  geom_histogram()+
+  scale_x_continuous(breaks = seq(0, 100, by = 5))
+```
+
+### Exercise 4
+I would expect that smoking would be associated with a greater likelyhood of being dead in 20 years compared to nonsmokers.
+
+### Exercise 5
+"Create a visualization depicting the relationship between smoking status and health outcome. Briefly describe the relationship, and evaluate whether this meets your expectations. Additionally, calculate the relevant conditional probabilities to help your narrative."
+```{r smoke-outcome}
+Whickham %>%
+  ggplot(aes(x = smoker, fill = outcome)) +
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d(option = "viridis") +
+  labs(
+    title = "Health Outcome by Smoking Status",
+    x = "Smoker",
+    y = "Proportion",
+    fill = "Health Outcome"
+  ) +
+  theme_minimal()
+```
+
+It seems that smokers are not more likely to be dead in twenty years compared to nonsmokers which is surprising.
+
+### Exercise 6
+"Create a new variable called age_cat"
+```{r age_cat}
+Whickham <- Whickham %>%
+  mutate(age_cat 
+         = case_when
+         (age <= 44 ~ "18-44",
+           age > 44 & age <= 64 ~ "45-64",
+           age > 64 ~ "65+"))
+```
+
+facet wrap
+```{r facet}
+Whickham %>%
+  ggplot(aes(x = smoker, fill = outcome)) +
+  geom_bar(position = "fill") +
+  scale_fill_viridis_d(option = "viridis") +
+  labs(
+    title = "Health Outcome by Smoking Status",
+    x = "Smoker",
+    y = "Proportion",
+    fill = "Health Outcome"
+  ) +
+  facet_wrap(~age_cat) +
+  theme_minimal()
 ```
