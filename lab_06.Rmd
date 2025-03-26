@@ -105,34 +105,40 @@ fish_continent <- fish_longer %>%
 
 head(fish_continent)
 
+```
+
+
+
+```{r fish-continent}
 continent_totals <- fish_continent %>%
   group_by(continent, type) %>%
   summarise(total_production = sum(total, na.rm = TRUE)) %>%
   ungroup()
 
-``
+```
+
+###need to fix this###
 ```{r plot-fish-continent}
 # Create a stacked bar plot
+library(scales)
+
 ggplot(continent_totals, aes(
-  x = reorder(continent, -total_production),  
+  x = reorder(continent, -total_production),  # Order continents by total production
   y = total_production,
-  fill = factor(type)  
+  fill = factor(type)  # Fill bars with different colors based on 'type'
 )) +
-  geom_bar(stat = "identity", position = "stack") +
-  scale_fill_viridis_d(option = "viridis") +
+  geom_bar(stat = "identity", position = "stack") +  # Stack the bars
+  scale_fill_viridis_d(option = "viridis") +  # Use a distinct color palette for fill
   labs(
-    title = "Total Fishery Production by Continent",
+    title = "Fishery Production by Continent",
     x = "Continent",
-    y = "Total Production (tons)",
+    y = "Total Production (Tons)",
     fill = "Fishery Type"
-  ) +
-  scale_y_continuous(
-    labels = comma  # Format y-axis with commas
   ) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    plot.margin = margin(1, 1, 1, 3)
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for readability
+    plot.margin = margin(1, 1, 1, 3)  # Adjust margins to make space for the labels
   )
 ```
 
