@@ -87,9 +87,9 @@ staff_long_propor %>%
 "Can you help them improve it? First, brainstorm how you would improve it. Then create the improved visualization and document your changes/decisions with bullet points. It’s ok if some of your improvements are aspirational, i.e. you don’t know how to implement it, but you think it’s a good idea. Implement what you can and leave notes identifying the aspirational improvements that could not be made. (You don’t need to recreate their plots in order to improve them)"
 
 in the plot below i
-- grouped the countries by contient to make the graph less messy
-- used a stacked bar plot rather than a line plot to make it easier to compare the total production of each continent
+- used a stacked bar plot rather than a line plot to make it easier to compare the production of each country
 - used a viridis color palette to make the graph more visually accessible
+- Instead of showing the total production--like they did in the initial graph--i focused on the proportion of each type of fishery production for each country. This makes it easier to compare the proportion of each type of fishery production for each country. My graph loses some of the information displayed in the original graph but because china was so much greater than any other country it was hard to compare the other countries meaningfully.
 
 ```{r load-fish}
 fish <- read_csv("data/fisheries.csv")
@@ -98,47 +98,43 @@ fish <- read_csv("data/fisheries.csv")
 fish_longer <- fish %>%
   pivot_longer(cols = -country, names_to = "type", values_to = "total")
 
-library(countrycode)
-fish_continent <- fish_longer %>%
-  mutate(continent = countrycode(country, "country.name", "continent"))
-
-
-head(fish_continent)
-
-```
-
-
-
-```{r fish-continent}
-continent_totals <- fish_continent %>%
-  group_by(continent, type) %>%
-  summarise(total_production = sum(total, na.rm = TRUE)) %>%
+fish_proportion <- fish_longer %>%
+  group_by(country) %>%
+  mutate(total_country = sum(total[type != "total"])) %>%  
+  filter(type != "total") %>%  # Remove 'total' row
+  mutate(proportion = total / total_country) %>% 
   ungroup()
 
 ```
 
-###need to fix this###
+
+
 ```{r plot-fish-continent}
-# Create a stacked bar plot
+
 library(scales)
 
-ggplot(continent_totals, aes(
-  x = reorder(continent, -total_production),  # Order continents by total production
-  y = total_production,
-  fill = factor(type)  # Fill bars with different colors based on 'type'
+ggplot(fish_proportion, aes(
+  x = reorder(country, -total_country),  
+  y = proportion,
+  fill = factor(type)  
 )) +
-  geom_bar(stat = "identity", position = "stack") +  # Stack the bars
-  scale_fill_viridis_d(option = "viridis") +  # Use a distinct color palette for fill
+  geom_bar(stat = "identity", position = "stack", width = 1.5) +  
+  scale_fill_viridis_d(option = "viridis") +  
   labs(
-    title = "Fishery Production by Continent",
-    x = "Continent",
-    y = "Total Production (Tons)",
+    title = "Fishery Production",
+    x = "Country (from most to least total production)",
+    y = "Proportion",
     fill = "Fishery Type"
   ) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for readability
-    plot.margin = margin(1, 1, 1, 3)  # Adjust margins to make space for the labels
+    axis.text.x = element_text(angle = 45, hjust = 1),  
+    plot.margin = margin(1, 3, 1, 3)  
+  ) +
+  scale_x_discrete(
+    breaks = levels(reorder(fish_proportion$country, -fish_proportion$total_country))[
+      seq(1, length(unique(fish_proportion$country)), by = 4)
+    ]
   )
 ```
 
